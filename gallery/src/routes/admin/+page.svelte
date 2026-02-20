@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Video } from '$lib/types';
+	import { base } from '$app/paths';
 
 	let videos: Video[] = $state([]);
 	let loading = $state(true);
@@ -7,7 +8,7 @@
 
 	async function loadVideos() {
 		try {
-			const res = await fetch('/videos.json', { cache: 'no-store' });
+			const res = await fetch(`${base}/videos.json`, { cache: 'no-store' });
 			if (!res.ok) throw new Error(`Failed to fetch videos: ${res.status}`);
 			videos = await res.json();
 		} catch (e) {

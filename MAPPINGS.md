@@ -62,7 +62,7 @@ Produced by `make_simple_video_list.py` from `videos_full.json` + `playlists_ful
 | `description` | `item["snippet"]["description"]` | |
 | `uploadDate` | `item["snippet"]["publishedAt"]` | ISO 8601 datetime string |
 | `tags` | `item["snippet"]["tags"]` | Defaults to `[]` if absent |
-| `unlisted` | `item["status"]["privacyStatus"]` | `true` if value is `"unlisted"`, `false` otherwise (includes `"public"` and `"private"`) |
+| `privacyStatus` | `item["status"]["privacyStatus"]` | `"public"`, `"unlisted"`, or `"private"` |
 | `thumbnails.high` | `item["snippet"]["thumbnails"]["high"]` | Object with `url`, `width`, `height` |
 | `thumbnails.standard` | `item["snippet"]["thumbnails"]["standard"]` | Falls back to `high` if `standard` is not present |
 | `channelId` | `item["snippet"]["channelId"]` | |
@@ -80,7 +80,7 @@ Produced by `make_simple_video_list.py` from `videos_full.json` + `playlists_ful
   "description": "A description of the video.",
   "uploadDate": "2024-03-01T14:00:00Z",
   "tags": ["tutorial", "python"],
-  "unlisted": false,
+  "privacyStatus": "public",
   "thumbnails": {
     "high": {"url": "https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg", "width": 480, "height": 360},
     "standard": {"url": "https://i.ytimg.com/vi/dQw4w9WgXcQ/sddefault.jpg", "width": 640, "height": 480}

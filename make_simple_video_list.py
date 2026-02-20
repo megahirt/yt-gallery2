@@ -11,6 +11,7 @@ HERE = Path(__file__).parent
 VIDEOS_FULL_FILE = HERE / "videos_full.json"
 PLAYLISTS_FULL_FILE = HERE / "playlists_full.json"
 OUTPUT_FILE = HERE / "videos.json"
+PRIVATE_FILE = HERE / "videos_private.json"
 
 
 def build_membership_lookup(playlists_full):
@@ -41,7 +42,7 @@ def simplify_video(item, membership_lookup):
         "description": snippet.get("description", ""),
         "uploadDate": snippet["publishedAt"],
         "tags": snippet.get("tags", []),
-        "unlisted": status["privacyStatus"] == "unlisted",
+        "privacyStatus": status["privacyStatus"],
         "thumbnails": {
             "high": high_thumb,
             "standard": standard_thumb,
@@ -71,8 +72,14 @@ def main():
     membership_lookup = build_membership_lookup(playlists_full)
     simplified = [simplify_video(item, membership_lookup) for item in videos_full]
 
-    OUTPUT_FILE.write_text(json.dumps(simplified, indent=2))
-    print(f"Simplified {len(simplified)} videos → {OUTPUT_FILE}")
+    public = [v for v in simplified if v["privacyStatus"] != "private"]
+    private = [v for v in simplified if v["privacyStatus"] == "private"]
+
+    OUTPUT_FILE.write_text(json.dumps(public, indent=2))
+    print(f"Wrote {len(public)} videos → {OUTPUT_FILE}")
+
+    PRIVATE_FILE.write_text(json.dumps(private, indent=2))
+    print(f"Wrote {len(private)} private videos → {PRIVATE_FILE}")
 
 
 if __name__ == "__main__":

@@ -13,8 +13,14 @@ wheels/
 client_secret.json
 token.json
 
-# Generated output
+# Generated output (fetch pipeline)
 videos_full.json
 playlists_full.json
 videos.json
 videos_private.json
+
+# Gallery (SvelteKit)
+gallery/node_modules/
+gallery/build/
+gallery/.svelte-kit/
+gallery/static/videos.json

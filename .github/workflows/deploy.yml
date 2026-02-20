@@ -1,0 +1,68 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_run:
+    workflows: ["Fetch YouTube Videos"]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: >-
+      github.event_name == 'push' ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: gallery/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: gallery
+
+      - name: Download videos.json artifact
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          workflow: fetch-videos.yml
+          name: videos-json
+          path: gallery/static
+          if_no_artifact_found: warn
+
+      - name: Ensure videos.json exists
+        run: |
+          if [ ! -f gallery/static/videos.json ]; then
+            echo '[]' > gallery/static/videos.json
+          fi
+
+      - name: Build
+        run: npm run build
+        working-directory: gallery
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: gallery/build
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

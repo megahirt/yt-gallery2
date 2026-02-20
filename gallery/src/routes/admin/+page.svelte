@@ -30,7 +30,7 @@
 	<div class="flex items-center justify-between">
 		<h1 class="text-2xl font-bold">Admin</h1>
 		<a
-			href="https://github.com/chrishirt/yt-gallery2/actions/workflows/fetch-videos.yml"
+			href="https://github.com/megahirt/yt-gallery2/actions/workflows/fetch-videos.yml"
 			target="_blank"
 			rel="noopener noreferrer"
 			class="btn preset-filled-primary-500"

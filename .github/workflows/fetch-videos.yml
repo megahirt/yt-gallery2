@@ -24,6 +24,9 @@ jobs:
       - name: Fetch videos
         run: uv run fetch_videos.py
 
+      - name: Generate simplified video list
+        run: uv run make_simple_video_list.py
+
       - name: Upload videos.json as artifact
         uses: actions/upload-artifact@v4
         with:

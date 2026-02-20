@@ -1,0 +1,31 @@
+name: Fetch YouTube Videos
+
+on:
+  workflow_dispatch: # manual trigger from the Actions tab
+  schedule:
+    - cron: "0 4 * * *" # daily at 04:00 UTC — adjust or remove as needed
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Write credentials from secrets
+        # Single quotes around the secret prevent the shell from interpreting
+        # JSON special characters (braces, quotes, etc.)
+        run: |
+          echo '${{ secrets.YOUTUBE_TOKEN_JSON }}' > token.json
+          echo '${{ secrets.YOUTUBE_CLIENT_SECRET_JSON }}' > client_secret.json
+
+      - name: Fetch videos
+        run: uv run fetch_videos.py
+
+      - name: Upload videos.json as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: videos-json
+          path: videos.json

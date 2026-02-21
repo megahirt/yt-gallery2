@@ -8,3 +8,8 @@ dependencies = [
     "google-auth-httplib2>=0.3.0",
     "google-auth-oauthlib>=1.2.4",
 ]
+
+[tool.pytest.ini_options]
+# Unit tests mock all external Google API dependencies, so no credentials or
+# network access are required. Run with: python3 -m pytest fetch/tests/
+testpaths = ["tests"]

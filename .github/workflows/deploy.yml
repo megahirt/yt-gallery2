@@ -2,11 +2,8 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [main]
-  workflow_run:
-    workflows: ["Fetch YouTube Videos"]
-    types: [completed]
-    branches: [main]
+    tags:
+      - 'v*'
 
 permissions:
   pages: write
@@ -19,9 +16,6 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    if: >-
-      github.event_name == 'push' ||
-      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
 
     environment:
       name: github-pages

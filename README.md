@@ -1,4 +1,4 @@
-# yt-gallery2
+# yt-gallery
 
 A private family video gallery that displays YouTube videos in a clean, browsable interface. Built with SvelteKit + Skeleton UI, deployed to GitHub Pages, with video metadata fetched from the YouTube Data API v3.
 

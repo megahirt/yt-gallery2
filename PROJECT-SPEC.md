@@ -19,7 +19,7 @@ No backend server is required—only static assets + an optional serverless hook
 Repository Structure
 
 ```
-yt-gallery2/
+yt-gallery/
 ├── fetch/                    # Python fetch pipeline
 │   ├── login.py              # OAuth login (local only)
 │   ├── fetch_videos.py       # Fetch from YouTube API

@@ -25,4 +25,6 @@ export interface Video {
 	categoryId: string | null;
 	viewCount: string;
 	playlists: PlaylistRef[];
+	videoDate?: string;
+	duration?: string;
 }

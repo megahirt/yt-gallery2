@@ -5,7 +5,7 @@ import { sampleVideos } from './fixtures/sample-videos.js';
 // Shared helpers
 // ---------------------------------------------------------------------------
 
-async function mockVideos(page: Page, videos: typeof sampleVideos = sampleVideos) {
+async function mockVideos(page: Page, videos: ReadonlyArray<object> = sampleVideos) {
 	await page.route('**/videos.json', async (route) => {
 		await route.fulfill({
 			status: 200,
@@ -37,17 +37,6 @@ test.describe('Admin page — layout and navigation', () => {
 
 	test('shows the Admin heading', async ({ page }) => {
 		await expect(page.getByRole('heading', { name: 'Admin' })).toBeVisible();
-	});
-
-	test('shows the site name in the navigation bar', async ({ page }) => {
-		await expect(page.getByRole('link', { name: 'Family Videos' })).toBeVisible();
-	});
-
-	test('Family Videos nav link points to the root', async ({ page }) => {
-		const navLink = page.getByRole('link', { name: 'Family Videos' });
-		const href = await navLink.getAttribute('href');
-		// In dev mode the base path is empty; href should be "/" or ""
-		expect(href === '/' || href === '').toBe(true);
 	});
 
 	test('shows "Refresh Video Data" button linking to GitHub Actions', async ({ page }) => {

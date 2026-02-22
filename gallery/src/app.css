@@ -2,3 +2,15 @@
 @import '@skeletonlabs/skeleton';
 @import '@skeletonlabs/skeleton-svelte';
 @import '@skeletonlabs/skeleton/themes/cerberus';
+
+:root {
+	--gallery-bg: #f3f4f6;
+	--sidebar-bg: #ffffff;
+	--content-bg: #f3f4f6;
+	--card-bg: #ffffff;
+	--accent: #0284c7;
+	--accent-light: #f0f9ff;
+	--text-primary: #111827;
+	--text-secondary: #6b7280;
+	--border: #e5e7eb;
+}

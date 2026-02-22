@@ -9,7 +9,7 @@ import { sampleVideos } from './fixtures/sample-videos.js';
  * Intercept the /videos.json request and respond with the provided data.
  * Must be called before page.goto().
  */
-async function mockVideos(page: Page, videos: typeof sampleVideos = sampleVideos) {
+async function mockVideos(page: Page, videos: ReadonlyArray<object> = sampleVideos) {
 	await page.route('**/videos.json', async (route) => {
 		await route.fulfill({
 			status: 200,
@@ -36,27 +36,21 @@ test.describe('Gallery page — video display', () => {
 	test('renders the page title in the browser tab', async ({ page }) => {
 		await mockVideos(page);
 		await page.goto('/');
-		await expect(page).toHaveTitle('Family Videos');
+		await expect(page).toHaveTitle('Hirt Family Gallery');
 	});
 
-	test('shows the site name in the navigation bar', async ({ page }) => {
+	test('shows the site name in the sidebar', async ({ page }) => {
 		await mockVideos(page);
 		await page.goto('/');
-		await expect(page.getByRole('link', { name: 'Family Videos' })).toBeVisible();
-	});
-
-	test('shows an Admin link in the navigation bar', async ({ page }) => {
-		await mockVideos(page);
-		await page.goto('/');
-		await expect(page.getByRole('link', { name: 'Admin' })).toBeVisible();
+		await expect(page.getByText('Hirt Family Gallery')).toBeVisible();
 	});
 
 	test('displays a video card for each video', async ({ page }) => {
 		await mockVideos(page);
 		await page.goto('/');
 
-		// Wait for the grid to appear
-		const cards = page.locator('.grid a');
+		// Cards are div[role="button"] elements inside the grid
+		const cards = page.locator('.grid [role="button"]');
 		await expect(cards).toHaveCount(sampleVideos.length);
 	});
 
@@ -69,59 +63,44 @@ test.describe('Gallery page — video display', () => {
 		}
 	});
 
-	test('video cards link to youtube.com', async ({ page }) => {
+	test('clicking a video card navigates to the detail page', async ({ page }) => {
 		await mockVideos(page);
 		await page.goto('/');
 
-		const firstCard = page.locator('.grid a').first();
-		const href = await firstCard.getAttribute('href');
-		expect(href).toContain('youtube.com/watch?v=');
+		const firstCard = page.locator('.grid [role="button"]').first();
+		await firstCard.click();
+
+		// Should navigate to /video/[id]
+		await expect(page).toHaveURL(/\/video\//);
 	});
 
-	test('video card opens in a new tab (target=_blank)', async ({ page }) => {
+	test('shows tag chips on video cards that have tags', async ({ page }) => {
 		await mockVideos(page);
 		await page.goto('/');
 
-		const firstCard = page.locator('.grid a').first();
-		await expect(firstCard).toHaveAttribute('target', '_blank');
+		// "Family Vacation 2023" has tags: vacation, beach, summer
+		const vacationCard = page.locator('.grid [role="button"]', { hasText: 'Family Vacation 2023' });
+		await expect(vacationCard.getByText('#vacation')).toBeVisible();
 	});
 
-	test('video card has rel=noopener noreferrer for security', async ({ page }) => {
+	test('shows view count on video cards', async ({ page }) => {
 		await mockVideos(page);
 		await page.goto('/');
 
-		const firstCard = page.locator('.grid a').first();
-		const rel = await firstCard.getAttribute('rel');
-		expect(rel).toContain('noopener');
-		expect(rel).toContain('noreferrer');
+		// vacationVid1 has viewCount: "42"
+		const vacationCard = page.locator('.grid [role="button"]', { hasText: 'Family Vacation 2023' });
+		await expect(vacationCard.getByText('👁 42')).toBeVisible();
 	});
 
-	test('shows playlist tags on video cards when video is in a playlist', async ({ page }) => {
-		await mockVideos(page);
+	test('does not show tag chips on cards with no tags', async ({ page }) => {
+		// Mock a video with no tags
+		const videosNoTags = sampleVideos.map((v) =>
+			v.id === 'christmasVid3' ? { ...v, tags: [] } : v
+		) as object[];
+		await mockVideos(page, videosNoTags);
 		await page.goto('/');
 
-		// "Family Vacation 2023" is in the "Vacations" playlist
-		const vacationCard = page.locator('.grid a', { hasText: 'Family Vacation 2023' });
-		await expect(vacationCard.getByText('Vacations')).toBeVisible();
-	});
-
-	test('shows multiple playlist tags when video is in multiple playlists', async ({ page }) => {
-		await mockVideos(page);
-		await page.goto('/');
-
-		// "Grandma's Birthday Party" is in both "Birthdays" and "Vacations"
-		const birthdayCard = page.locator('.grid a', { hasText: "Grandma's Birthday Party" });
-		await expect(birthdayCard.getByText('Birthdays')).toBeVisible();
-		await expect(birthdayCard.getByText('Vacations')).toBeVisible();
-	});
-
-	test('does not show playlist section on cards with no playlists', async ({ page }) => {
-		await mockVideos(page);
-		await page.goto('/');
-
-		// "Christmas Morning" has no playlists — its card should have no tag spans
-		const christmasCard = page.locator('.grid a', { hasText: 'Christmas Morning' });
-		// The playlist tags container uses specific classes — check it's absent
+		const christmasCard = page.locator('.grid [role="button"]', { hasText: 'Christmas Morning' });
 		await expect(christmasCard.locator('.flex.flex-wrap.gap-1')).not.toBeVisible();
 	});
 });
@@ -178,96 +157,89 @@ test.describe('Gallery page — search', () => {
 	test('clears filter when search box is emptied', async ({ page }) => {
 		const searchBox = page.getByPlaceholder('Search videos...');
 		await searchBox.fill('vacation');
-		await expect(page.locator('.grid a')).toHaveCount(2); // vacation appears in 2 videos
+		await expect(page.locator('.grid [role="button"]')).toHaveCount(2); // "vacation" matches 2 videos
 
 		await searchBox.fill('');
-		await expect(page.locator('.grid a')).toHaveCount(sampleVideos.length);
+		await expect(page.locator('.grid [role="button"]')).toHaveCount(sampleVideos.length);
 	});
 });
 
 // ---------------------------------------------------------------------------
-// Playlist filter buttons
+// Sidebar collection filter
 // ---------------------------------------------------------------------------
 
-test.describe('Gallery page — playlist filter', () => {
+test.describe('Gallery page — collection filter', () => {
 	test.beforeEach(async ({ page }) => {
 		await mockVideos(page);
 		await page.goto('/');
 	});
 
-	test('shows playlist filter buttons for each unique playlist', async ({ page }) => {
+	test('shows collection buttons in sidebar for each unique playlist', async ({ page }) => {
 		// Sample data has 2 unique playlists: Birthdays, Vacations (sorted)
 		await expect(page.getByRole('button', { name: 'Birthdays' })).toBeVisible();
 		await expect(page.getByRole('button', { name: 'Vacations' })).toBeVisible();
 	});
 
-	test('shows "All" button in playlist filter', async ({ page }) => {
-		await expect(page.getByRole('button', { name: 'All' })).toBeVisible();
+	test('shows "All Videos" button in sidebar', async ({ page }) => {
+		await expect(page.getByRole('button', { name: 'All Videos' })).toBeVisible();
 	});
 
-	test('clicking a playlist button filters to only that playlist\'s videos', async ({
+	test('clicking a collection button filters to only that collection\'s videos', async ({
 		page,
 	}) => {
 		await page.getByRole('button', { name: 'Birthdays' }).click();
 
 		// Only "Grandma's Birthday Party" is in Birthdays
-		const cards = page.locator('.grid a');
+		const cards = page.locator('.grid [role="button"]');
 		await expect(cards).toHaveCount(1);
 		await expect(cards.first()).toContainText("Grandma's Birthday Party");
 	});
 
-	test('Vacations playlist contains both vacation and birthday videos', async ({ page }) => {
+	test('Vacations collection contains both vacation and birthday videos', async ({ page }) => {
 		await page.getByRole('button', { name: 'Vacations' }).click();
 
 		// Both "Family Vacation 2023" and "Grandma's Birthday Party" are in Vacations
-		const cards = page.locator('.grid a');
+		const cards = page.locator('.grid [role="button"]');
 		await expect(cards).toHaveCount(2);
 	});
 
-	test('clicking the "All" button clears the playlist filter', async ({ page }) => {
+	test('clicking "All Videos" clears the collection filter', async ({ page }) => {
 		// First select a filter
 		await page.getByRole('button', { name: 'Birthdays' }).click();
-		await expect(page.locator('.grid a')).toHaveCount(1);
+		await expect(page.locator('.grid [role="button"]')).toHaveCount(1);
 
-		// Then click All to reset
-		await page.getByRole('button', { name: 'All' }).click();
-		await expect(page.locator('.grid a')).toHaveCount(sampleVideos.length);
+		// Then click All Videos to reset
+		await page.getByRole('button', { name: 'All Videos' }).click();
+		await expect(page.locator('.grid [role="button"]')).toHaveCount(sampleVideos.length);
 	});
 
-	test('clicking an active playlist filter again deselects it', async ({ page }) => {
-		// Select Birthdays
-		await page.getByRole('button', { name: 'Birthdays' }).click();
-		await expect(page.locator('.grid a')).toHaveCount(1);
-
-		// Click it again to deselect (toggle behavior)
-		await page.getByRole('button', { name: 'Birthdays' }).click();
-		await expect(page.locator('.grid a')).toHaveCount(sampleVideos.length);
-	});
-
-	test('playlist filter and search can be combined', async ({ page }) => {
-		// Filter to Vacations (2 videos), then search for "Christmas"
+	test('collection filter and search can be combined', async ({ page }) => {
+		// Filter to Vacations (2 videos), then search for "beach"
 		await page.getByRole('button', { name: 'Vacations' }).click();
 		await page.getByPlaceholder('Search videos...').fill('beach');
 
 		// Only "Family Vacation 2023" has "beach" in its description/tags
-		const cards = page.locator('.grid a');
+		const cards = page.locator('.grid [role="button"]');
 		await expect(cards).toHaveCount(1);
 		await expect(cards.first()).toContainText('Family Vacation 2023');
 	});
 });
 
 // ---------------------------------------------------------------------------
-// Playlist filter visibility
+// Sidebar collection visibility
 // ---------------------------------------------------------------------------
 
-test.describe('Gallery page — playlist filter visibility', () => {
-	test('playlist filter is not shown when no videos have playlists', async ({ page }) => {
-		const videosWithoutPlaylists = sampleVideos.map((v) => ({ ...v, playlists: [] }));
-		await mockVideos(page, videosWithoutPlaylists as typeof sampleVideos);
+test.describe('Gallery page — collection filter visibility', () => {
+	test('collection buttons are not shown when no videos have playlists', async ({ page }) => {
+		const videosWithoutPlaylists: object[] = sampleVideos.map((v) => ({ ...v, playlists: [] }));
+		await mockVideos(page, videosWithoutPlaylists);
 		await page.goto('/');
 
-		// No playlist buttons should appear (not even "All")
-		await expect(page.getByRole('button', { name: 'All' })).not.toBeVisible();
+		// Individual collection buttons should not appear (Birthdays, Vacations)
+		await expect(page.getByRole('button', { name: 'Birthdays' })).not.toBeVisible();
+		await expect(page.getByRole('button', { name: 'Vacations' })).not.toBeVisible();
+		// "All Videos" is always visible
+		await expect(page.getByRole('button', { name: 'All Videos' })).toBeVisible();
 	});
 });
 
@@ -295,6 +267,67 @@ test.describe('Gallery page — empty and error states', () => {
 		await mockVideos(page, []);
 		await page.goto('/');
 
-		await expect(page.locator('.grid')).not.toBeVisible();
+		await expect(page.locator('.grid [role="button"]')).toHaveCount(0);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// Grid density toggle
+// ---------------------------------------------------------------------------
+
+test.describe('Gallery page — grid density toggle', () => {
+	test('density toggle buttons are visible', async ({ page }) => {
+		await mockVideos(page);
+		await page.goto('/');
+
+		await expect(page.getByTitle('Large grid')).toBeVisible();
+		await expect(page.getByTitle('Medium grid')).toBeVisible();
+		await expect(page.getByTitle('List view')).toBeVisible();
+	});
+});
+
+// ---------------------------------------------------------------------------
+// Video detail page
+// ---------------------------------------------------------------------------
+
+test.describe('Video detail page', () => {
+	test('navigating to /video/[id] shows the video title', async ({ page }) => {
+		await mockVideos(page);
+		await page.goto('/');
+		await page.goto('/video/vacationVid1');
+
+		await expect(page.getByText('Family Vacation 2023')).toBeVisible();
+	});
+
+	test('shows a "Back to Gallery" link on the detail page', async ({ page }) => {
+		await mockVideos(page);
+		await page.goto('/video/vacationVid1');
+
+		await expect(page.getByRole('link', { name: /Back to Gallery/ })).toBeVisible();
+	});
+
+	test('shows a play button to load the YouTube embed', async ({ page }) => {
+		await mockVideos(page);
+		await page.goto('/video/vacationVid1');
+
+		// The thumbnail area has an aria-label for the play button
+		await expect(page.getByRole('button', { name: /Play/ })).toBeVisible();
+	});
+
+	test('shows "Watch on YouTube" link on detail page', async ({ page }) => {
+		await mockVideos(page);
+		await page.goto('/video/vacationVid1');
+
+		const ytLink = page.getByRole('link', { name: /Watch on YouTube/ });
+		await expect(ytLink).toBeVisible();
+		const href = await ytLink.getAttribute('href');
+		expect(href).toContain('youtube.com/watch?v=vacationVid1');
+	});
+
+	test('shows "Video not found" for unknown video ID', async ({ page }) => {
+		await mockVideos(page);
+		await page.goto('/video/nonexistent-id');
+
+		await expect(page.getByText('Video not found.')).toBeVisible();
 	});
 });
